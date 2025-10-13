@@ -1,6 +1,13 @@
 /* A convenience wrapper around the raw WP API */
 
-import type { WPPost, WPPostsQuery, WPCategory, WPUser, WPTag, WPCollectionMeta } from '$lib/wp-api';
+import type {
+	WPPost,
+	WPPostsQuery,
+	WPCategory,
+	WPUser,
+	WPTag,
+	WPCollectionMeta
+} from '$lib/wp-api';
 import { getPosts, getPost, getCategories, getTags, getUser, getPostsWithMeta } from '$lib/wp-api';
 
 interface InnovatorPost {
@@ -112,7 +119,7 @@ function extractPathFromUrl(url: string): string {
 		return urlObj.pathname;
 	} catch {
 		// Fallback: try to extract path from theinnovator.org URLs
-		const match = url.match(/https:\/\/theinnovator\.org(\/.*)/);
+		const match = url.match(/https:\/\/.*theinnovator\.org(\/.*)/);
 		return match ? match[1] : url;
 	}
 }

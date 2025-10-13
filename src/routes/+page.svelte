@@ -6,11 +6,7 @@
 	import PastIssues from '$lib/components/PastIssues.svelte';
 	import Snippet from '$lib/components/Snippet.svelte';
 	import { partitionFrontPagePosts } from '$lib/api';
-	import type {
-		FrontPagePosts,
-		InnovatorPost,
-		PaginatedInnovatorPosts
-	} from '$lib/api';
+	import type { FrontPagePosts, InnovatorPost, PaginatedInnovatorPosts } from '$lib/api';
 
 	type PaginationState = Omit<PaginatedInnovatorPosts, 'posts'>;
 
@@ -113,7 +109,7 @@
 <div class="full-page">
 	<div class="banner">
 		<img
-			src="https://theinnovator.org/wp-content/uploads/2020/04/Horizontal-Logo-PNG.png"
+			src="https://wp.theinnovator.org/wp-content/uploads/2020/04/Horizontal-Logo-PNG.png"
 			alt="The Innovator"
 		/>
 	</div>
@@ -247,7 +243,9 @@
 		font-size: 0.95rem;
 		font-weight: 600;
 		cursor: pointer;
-		transition: opacity 0.2s ease, transform 0.2s ease;
+		transition:
+			opacity 0.2s ease,
+			transform 0.2s ease;
 	}
 
 	.load-more-button:disabled {
