@@ -225,7 +225,7 @@ function joinPath(base: string, path: string) {
 	return `${base}/${cleaned}`;
 }
 
-async function apiFetch(path: string, options?: RequestInit) {
+async function apiFetchResponse(path: string, options?: RequestInit) {
 	const url = path.match(/^https?:\/\//u) ? path : joinPath(BASE, path);
 
 	const res = await fetch(url, options);
@@ -239,6 +239,11 @@ async function apiFetch(path: string, options?: RequestInit) {
 		}
 		throw new Error(`API request failed: ${res.status} ${res.statusText} - ${body}`);
 	}
+	return res;
+}
+
+async function apiFetch(path: string, options?: RequestInit) {
+	const res = await apiFetchResponse(path, options);
 	return res.json();
 }
 
@@ -263,8 +268,8 @@ function qs(obj: Record<string, unknown> | URLSearchParams | undefined) {
 
 function withDefaultEmbed(
 	query: Record<string, unknown> | undefined,
-		defaultEmbed: string | string[]
-	): Record<string, unknown> {
+	defaultEmbed: string | string[]
+): Record<string, unknown> {
 		const params = { ...(query ?? {}) };
 		if (params._embed == null) {
 			params._embed = defaultEmbed;
@@ -273,9 +278,31 @@ function withDefaultEmbed(
 }
 
 // Convenience helpers for common WP endpoints. You can expand these as needed.
-export async function getPosts(query?: WPPostsQuery): Promise<WPPost[]> {
+export interface WPCollectionMeta {
+	total: number;
+	totalPages: number;
+}
+
+export interface WPCollectionResult<T> extends WPCollectionMeta {
+	items: T[];
+}
+
+export async function getPostsWithMeta(query?: WPPostsQuery): Promise<WPCollectionResult<WPPost>> {
 	const queryWithEmbed = withDefaultEmbed(query as Record<string, unknown> | undefined, DEFAULT_EMBEDS);
-	return apiFetch(`wp/v2/posts${qs(queryWithEmbed)}`);
+	const res = await apiFetchResponse(`wp/v2/posts${qs(queryWithEmbed)}`);
+	const total = Number.parseInt(res.headers.get('x-wp-total') ?? '0', 10);
+	const totalPages = Number.parseInt(res.headers.get('x-wp-totalpages') ?? '0', 10);
+	const items = (await res.json()) as WPPost[];
+	return {
+		items,
+		total,
+		totalPages
+	};
+}
+
+export async function getPosts(query?: WPPostsQuery): Promise<WPPost[]> {
+	const { items } = await getPostsWithMeta(query);
+	return items;
 }
 
 export async function getPost(
@@ -307,6 +334,7 @@ export async function getUser(id: number | string): Promise<WPUser> {
 
 export default {
 	apiFetch,
+	getPostsWithMeta,
 	getPosts,
 	getPost,
 	getPages,

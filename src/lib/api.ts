@@ -1,7 +1,7 @@
 /* A convenience wrapper around the raw WP API */
 
-import type { WPPost, WPPostsQuery, WPCategory, WPUser, WPTag } from '$lib/wp-api';
-import { getPosts, getPost, getCategories, getTags, getUser } from '$lib/wp-api';
+import type { WPPost, WPPostsQuery, WPCategory, WPUser, WPTag, WPCollectionMeta } from '$lib/wp-api';
+import { getPosts, getPost, getCategories, getTags, getUser, getPostsWithMeta } from '$lib/wp-api';
 
 interface InnovatorPost {
 	// Core content fields (extracted for convenience)
@@ -40,6 +40,8 @@ const authorsCache: Map<number, { id: number; name: string; slug: string }> = ne
 const tagBySlugCache: Map<string, WPTag> = new Map();
 // Cache category lookups by slug
 const categoryBySlugCache: Map<string, WPCategory> = new Map();
+
+const DEFAULT_POSTS_PER_PAGE = 10;
 
 // Author name overrides for known posts
 const authorOverrides: Record<number, string> = {
@@ -264,16 +266,9 @@ async function toInnovatorPost(post: WPPost): Promise<InnovatorPost> {
 	};
 }
 
-/**
- * Get posts with convenience transformations
- */
-export const getInnovatorPosts = async (query: WPPostsQuery): Promise<InnovatorPost[]> => {
-	const basePosts = await getPosts(query);
-
-	// Molongui only injects guest author data when fetching single posts or when per_page=1.
-	// Re-fetch each post individually (in parallel) to guarantee we get the enriched author info.
-	const postsWithEmbeddedAuthors = await Promise.all(
-		basePosts.map(async (post) => {
+async function loadPostsWithEmbeddedAuthors(posts: WPPost[]): Promise<WPPost[]> {
+	return Promise.all(
+		posts.map(async (post) => {
 			try {
 				return await getPost(post.id);
 			} catch (error) {
@@ -282,8 +277,53 @@ export const getInnovatorPosts = async (query: WPPostsQuery): Promise<InnovatorP
 			}
 		})
 	);
+}
 
+async function hydrateInnovatorPosts(posts: WPPost[]): Promise<InnovatorPost[]> {
+	const postsWithEmbeddedAuthors = await loadPostsWithEmbeddedAuthors(posts);
 	return Promise.all(postsWithEmbeddedAuthors.map(toInnovatorPost));
+}
+
+/**
+ * Get posts with convenience transformations
+ */
+export const getInnovatorPosts = async (query: WPPostsQuery): Promise<InnovatorPost[]> => {
+	const basePosts = await getPosts(query);
+	return hydrateInnovatorPosts(basePosts);
+};
+
+export interface PaginatedInnovatorPosts extends WPCollectionMeta {
+	posts: InnovatorPost[];
+	page: number;
+	perPage: number;
+	hasMore: boolean;
+}
+
+export const getInnovatorPostsPaginated = async (
+	query: WPPostsQuery = {}
+): Promise<PaginatedInnovatorPosts> => {
+	const normalizedPage = query.page && query.page > 0 ? query.page : 1;
+	const normalizedPerPage =
+		query.per_page && query.per_page > 0 ? query.per_page : DEFAULT_POSTS_PER_PAGE;
+
+	const wpQuery: WPPostsQuery = {
+		...query,
+		page: normalizedPage,
+		per_page: normalizedPerPage
+	};
+
+	const { items, total, totalPages } = await getPostsWithMeta(wpQuery);
+	const posts = await hydrateInnovatorPosts(items);
+	const hasMore = totalPages > 0 && normalizedPage < totalPages;
+
+	return {
+		posts,
+		page: normalizedPage,
+		perPage: normalizedPerPage,
+		total,
+		totalPages,
+		hasMore
+	};
 };
 
 /**
@@ -390,17 +430,23 @@ export const extractPathsFromHtml = (html: string): string[] => {
 };
 
 export const currentSchoolYear = schoolYearFromDate(new Date());
+export const FRONT_PAGE_PAGE_SIZE = DEFAULT_POSTS_PER_PAGE;
 
 export type FrontPagePosts = {
 	currentYear: { highlighted: InnovatorPost[]; others: InnovatorPost[] };
 	prevYears: Array<{ year: string; highlighted: InnovatorPost[]; others: InnovatorPost[] }>;
 };
 
-// Get posts from *this school year* for front page, with "highlighted" posts first
-export const getFrontPagePosts = async (): Promise<FrontPagePosts> => {
-	const posts = await getInnovatorPosts({ per_page: 10 });
-	const thisYear = posts.filter((p) => p.schoolYear === currentSchoolYear);
-	const prevYears = posts.filter((p) => p.schoolYear !== currentSchoolYear);
+const isHighlightedCategory = (post: InnovatorPost) =>
+	post.categories.some((cat) => cat.name?.toLowerCase().includes('highlight'));
+
+const categorizePostForFrontPage = (post: InnovatorPost) =>
+	(isHighlightedCategory(post) ? 'highlighted' : 'others') as 'highlighted' | 'others';
+
+export function partitionFrontPagePosts(posts: InnovatorPost[]): FrontPagePosts {
+	const currentYearPosts = posts.filter((p) => p.schoolYear === currentSchoolYear);
+	const previousYearPosts = posts.filter((p) => p.schoolYear !== currentSchoolYear);
+
 	const prevYearGroups = new Map<
 		string,
 		{
@@ -410,13 +456,7 @@ export const getFrontPagePosts = async (): Promise<FrontPagePosts> => {
 		}
 	>();
 
-	const isHighlightedCategory = (post: InnovatorPost) =>
-		post.categories.some((cat) => cat.name?.toLowerCase().includes('highlight'));
-
-	const categorize = (post: InnovatorPost) =>
-		isHighlightedCategory(post) ? 'highlighted' : 'others';
-
-	for (const post of prevYears) {
+	for (const post of previousYearPosts) {
 		let group = prevYearGroups.get(post.schoolYear);
 		if (!group) {
 			const published = new Date(post.wpPostObject.date);
@@ -426,10 +466,10 @@ export const getFrontPagePosts = async (): Promise<FrontPagePosts> => {
 			group = { highlighted: [], others: [], startYear };
 			prevYearGroups.set(post.schoolYear, group);
 		}
-		group[categorize(post)].push(post);
+		group[categorizePostForFrontPage(post)].push(post);
 	}
 
-	const prevYearsSorted = Array.from(prevYearGroups.entries())
+	const prevYears = Array.from(prevYearGroups.entries())
 		.sort((a, b) => b[1].startYear - a[1].startYear)
 		.map(([year, { highlighted, others }]) => ({
 			year,
@@ -439,11 +479,20 @@ export const getFrontPagePosts = async (): Promise<FrontPagePosts> => {
 
 	return {
 		currentYear: {
-			highlighted: thisYear.filter(isHighlightedCategory),
-			others: thisYear.filter((p) => !isHighlightedCategory(p))
+			highlighted: currentYearPosts.filter(isHighlightedCategory),
+			others: currentYearPosts.filter((post) => !isHighlightedCategory(post))
 		},
-		prevYears: prevYearsSorted
+		prevYears
 	};
+}
+
+// Get posts from *this school year* for front page, with "highlighted" posts first
+export const getFrontPagePosts = async (): Promise<FrontPagePosts> => {
+	const { posts } = await getInnovatorPostsPaginated({
+		per_page: FRONT_PAGE_PAGE_SIZE,
+		page: 1
+	});
+	return partitionFrontPagePosts(posts);
 };
 
 function fixBrs(html?: string | null): string {
@@ -456,4 +505,4 @@ export { getPosts, getPost, getPages, getCategories, getTags } from '$lib/wp-api
 export type { WPPost, WPPostsQuery, WPCategory, WPTag } from '$lib/wp-api';
 
 // Export our enhanced types
-export type { InnovatorPost };
+export type { InnovatorPost, PaginatedInnovatorPosts };
