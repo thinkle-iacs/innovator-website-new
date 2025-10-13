@@ -181,20 +181,6 @@ export function schoolYearBounds(year: string): { start: Date; end: Date } {
 }
 
 /**
- * Extract URL from HTML anchor tag
- * Example: <a href="https://example.com/path">text</a> -> /path
- * @param html - HTML string containing anchor tags
- * @returns The extracted path or null if no anchor found
- */
-// function extractPathFromAnchor(html: string): string | null {
-// 	const anchorMatch = html.match(/<a[^>]+href=["']([^"']+)["'][^>]*>/i);
-// 	if (anchorMatch) {
-// 		return extractPathFromUrl(anchorMatch[1]);
-// 	}
-// 	return null;
-// }
-
-/**
  * Get all categories with caching
  */
 async function getCategoriesCached(): Promise<WPCategory[]> {
@@ -412,7 +398,7 @@ export type FrontPagePosts = {
 
 // Get posts from *this school year* for front page, with "highlighted" posts first
 export const getFrontPagePosts = async (): Promise<FrontPagePosts> => {
-	const posts = await getInnovatorPosts({ per_page: 30 });
+	const posts = await getInnovatorPosts({ per_page: 10 });
 	const thisYear = posts.filter((p) => p.schoolYear === currentSchoolYear);
 	const prevYears = posts.filter((p) => p.schoolYear !== currentSchoolYear);
 	const prevYearGroups = new Map<
