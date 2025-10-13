@@ -313,6 +313,34 @@ export const getInnovatorPost = async (id: number | string): Promise<InnovatorPo
  */
 export const getInnovatorCategories = getCategoriesCached;
 
+export const getInnovatorPostsByCategory = async (
+	categoryId: number,
+	query?: WPPostsQuery
+): Promise<InnovatorPost[]> => {
+	return getInnovatorPosts({ ...query, categories: categoryId });
+};
+
+export async function getCategoryBySlug(slug: string): Promise<WPCategory | null> {
+	const normalized = slug.toLowerCase();
+	if (categoryBySlugCache.has(normalized)) {
+		return categoryBySlugCache.get(normalized) ?? null;
+	}
+
+	const categories = await getCategoriesCached();
+	let category = categories.find((cat) => cat.slug.toLowerCase() === normalized) ?? null;
+
+	if (!category) {
+		const response = await getCategories({ slug: normalized, per_page: 1 });
+		category = response[0] ?? null;
+	}
+
+	if (category) {
+		categoryBySlugCache.set(normalized, category);
+	}
+
+	return category;
+}
+
 export const getInnovatorPostsByTag = async (tagId: number, query?: WPPostsQuery) => {
 	return getInnovatorPosts({ ...query, tags: tagId });
 };

@@ -4,22 +4,19 @@
 	import PageShell from '$lib/components/PageShell.svelte';
 
 	let { data }: PageProps = $props();
-	const { posts, year } = data;
+	const { year, posts } = data;
 </script>
 
 <svelte:head>
-	<title>School Year {year} | The Innovator</title>
-	<meta
-		name="description"
-		content={`Stories published during the ${year} school year on The Innovator.`}
-	/>
+	<title>{year} Archives | The Innovator</title>
+	<meta name="description" content={`Articles published in ${year} on The Innovator.`} />
 </svelte:head>
 
 <PageShell>
 	<section class="list-page">
-		<h1>{year} School Year</h1>
+		<h1>{year} Archives</h1>
 		{#if posts.length === 0}
-			<p>No stories were found for this school year.</p>
+			<p>No stories were published in {year}.</p>
 		{:else}
 			<div class="post-list">
 				{#each posts as post}
