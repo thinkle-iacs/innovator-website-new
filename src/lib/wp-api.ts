@@ -216,7 +216,7 @@ export interface WPUser {
 
 // Centralised API base for the WordPress REST API. Set this in your env as
 // PUBLIC_WP_API_BASE (example in project root .env or .env.example).
-const BASE = (env.PUBLIC_WP_API_BASE || 'https://theinnovator.org/wp-json').replace(/\/+$/u, '');
+const BASE = (env.PUBLIC_WP_API_BASE || 'https://wp.theinnovator.org/wp-json').replace(/\/+$/u, '');
 const DEFAULT_EMBEDS: Array<string> = ['author', 'wp:featuredmedia'];
 
 function joinPath(base: string, path: string) {
@@ -270,10 +270,10 @@ function withDefaultEmbed(
 	query: Record<string, unknown> | undefined,
 	defaultEmbed: string | string[]
 ): Record<string, unknown> {
-		const params = { ...(query ?? {}) };
-		if (params._embed == null) {
-			params._embed = defaultEmbed;
-		}
+	const params = { ...(query ?? {}) };
+	if (params._embed == null) {
+		params._embed = defaultEmbed;
+	}
 	return params;
 }
 
@@ -288,7 +288,10 @@ export interface WPCollectionResult<T> extends WPCollectionMeta {
 }
 
 export async function getPostsWithMeta(query?: WPPostsQuery): Promise<WPCollectionResult<WPPost>> {
-	const queryWithEmbed = withDefaultEmbed(query as Record<string, unknown> | undefined, DEFAULT_EMBEDS);
+	const queryWithEmbed = withDefaultEmbed(
+		query as Record<string, unknown> | undefined,
+		DEFAULT_EMBEDS
+	);
 	const res = await apiFetchResponse(`wp/v2/posts${qs(queryWithEmbed)}`);
 	const total = Number.parseInt(res.headers.get('x-wp-total') ?? '0', 10);
 	const totalPages = Number.parseInt(res.headers.get('x-wp-totalpages') ?? '0', 10);
