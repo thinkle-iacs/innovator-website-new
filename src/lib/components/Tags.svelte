@@ -6,14 +6,16 @@
 {#if post.categories.length > 0}
 	<div class="categories" aria-label="Categories">
 		{#each post.categories as category}
-			<a
-				class="category"
-				href={`/category/${category.slug}`}
-				rel="tag"
-				title={`View all posts in ${category.name}`}
-			>
-				{category.name}
-			</a>
+			{#if category.name !== 'Highlight'}
+				<a
+					class="category"
+					href={`/category/${category.slug}`}
+					rel="tag"
+					title={`View all posts in ${category.name}`}
+				>
+					{category.name}
+				</a>
+			{/if}
 		{/each}
 	</div>
 {/if}
@@ -36,7 +38,9 @@
 		background-color: var(--tag-color, #333);
 		border-radius: 999px;
 		color: var(--tag-text, #fafafa);
-		transition: background-color 0.2s ease, color 0.2s ease;
+		transition:
+			background-color 0.2s ease,
+			color 0.2s ease;
 	}
 
 	.category:hover,

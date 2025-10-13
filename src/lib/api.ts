@@ -313,43 +313,6 @@ export const getInnovatorPost = async (id: number | string): Promise<InnovatorPo
  */
 export const getInnovatorCategories = getCategoriesCached;
 
-export const getInnovatorPostsByCategory = async (categoryId: number, query?: WPPostsQuery) => {
-	return getInnovatorPosts({ ...query, categories: categoryId });
-};
-
-export async function getCategoryBySlug(slug: string): Promise<WPCategory | null> {
-	const normalized = slug.toLowerCase();
-	if (categoryBySlugCache.has(normalized)) {
-		return categoryBySlugCache.get(normalized) ?? null;
-	}
-
-	const categories = await getCategoriesCached();
-	let category = categories.find((cat) => cat.slug.toLowerCase() === normalized) ?? null;
-
-	if (!category) {
-		const response = await getCategories({ slug: normalized, per_page: 1 });
-		category = response[0] ?? null;
-	}
-
-	if (category) {
-		categoryBySlugCache.set(normalized, category);
-	}
-
-	return category;
-}
-
-export const getInnovatorPostsByCategorySlug = async (
-	slug: string,
-	query?: WPPostsQuery
-): Promise<{ category: WPCategory | null; posts: InnovatorPost[] }> => {
-	const category = await getCategoryBySlug(slug);
-	if (!category) {
-		return { category: null, posts: [] };
-	}
-	const posts = await getInnovatorPosts({ ...query, categories: category.id });
-	return { category, posts };
-};
-
 export const getInnovatorPostsByTag = async (tagId: number, query?: WPPostsQuery) => {
 	return getInnovatorPosts({ ...query, tags: tagId });
 };
@@ -436,7 +399,8 @@ export const getFrontPagePosts = async (): Promise<FrontPagePosts> => {
 	const isHighlightedCategory = (post: InnovatorPost) =>
 		post.categories.some((cat) => cat.name?.toLowerCase().includes('highlight'));
 
-	const categorize = (post: InnovatorPost) => (isHighlightedCategory(post) ? 'highlighted' : 'others');
+	const categorize = (post: InnovatorPost) =>
+		isHighlightedCategory(post) ? 'highlighted' : 'others';
 
 	for (const post of prevYears) {
 		let group = prevYearGroups.get(post.schoolYear);
