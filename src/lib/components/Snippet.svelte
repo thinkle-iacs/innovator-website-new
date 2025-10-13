@@ -2,6 +2,7 @@
 	import type { InnovatorPost } from '$lib/api';
 	import Dateline from './Dateline.svelte';
 	import Byline from './Byline.svelte';
+	import Tags from './Tags.svelte';
 	let { post }: { post: InnovatorPost } = $props();
 
 	const stripHtml = (html: string) =>
@@ -23,10 +24,15 @@
 
 <article class="snippet">
 	<h3><a href={post.relativeLink}>{@html post.title}</a></h3>
-	<Dateline {post} />
-	<Byline {post} />
+	<div class="meta">
+		<div class="details">
+			<Dateline {post} />
+			<Byline {post} />
+		</div>
+		<Tags {post} />
+	</div>
 	{#if isTiny(post)}
-		<div class="page">
+		<div class="page content">
 			{#if shouldShowFeaturedImage(post)}
 				<div class="featured-image-container">
 					<a href={post.relativeLink}>
@@ -73,20 +79,22 @@
 
 <style>
 	article {
-		padding-bottom: 16px;
-		border-bottom: 1px solid #19243d;
+		padding: 1rem;
+		margin-bottom: 1.5rem;
+		border-bottom: 1px solid var(--color-border, #d9dce4);
+		background-color: var(--color-surface);
 	}
 	h3 a {
 		text-decoration: none;
 		color: inherit;
 	}
-	iframe,
+	/* 	iframe,
 	article :global(iframe),
 	img,
 	article :global(img) {
 		max-width: 100%;
 		width: min(400px, 100%);
-	}
+	} */
 	iframe,
 	video,
 	:global(video, iframe) {
@@ -99,8 +107,25 @@
 	.read-more {
 		font-style: italic;
 		text-align: right;
+		font-family: var(--font-sans, 'Work Sans', sans-serif);
+		color: var(--link-color, #1949b1);
 	}
 	h3 {
 		margin-bottom: 0;
+	}
+	.meta {
+		display: flex;
+		justify-content: space-between;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		font-family: var(--font-sans, 'Work Sans', sans-serif);
+		font-size: 0.85rem;
+		color: var(--meta-text, #3c3f52);
+	}
+	.meta .details {
+		display: flex;
+		gap: 0.75rem;
+		flex-wrap: wrap;
+		align-items: baseline;
 	}
 </style>

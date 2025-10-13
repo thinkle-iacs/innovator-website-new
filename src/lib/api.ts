@@ -13,6 +13,7 @@ interface InnovatorPost {
 	// Enhanced fields
 	relativeLink?: string;
 	categoryNames?: string[];
+	categories: Array<{ id: number; name: string; slug: string }>;
 	dateline: string;
 	byline: string;
 	schoolYear: string;
@@ -37,6 +38,8 @@ const authorsCache: Map<number, { id: number; name: string; slug: string }> = ne
 
 // Cache tag lookups by slug since WP REST doesn't provide them with posts
 const tagBySlugCache: Map<string, WPTag> = new Map();
+// Cache category lookups by slug
+const categoryBySlugCache: Map<string, WPCategory> = new Map();
 
 // Author name overrides for known posts
 const authorOverrides: Record<number, string> = {
@@ -219,11 +222,21 @@ async function toInnovatorPost(post: WPPost): Promise<InnovatorPost> {
 	const relativeLink = extractPathFromUrl(post.link);
 	const contentHtml = post.content.rendered ?? '';
 
-	// Get category names for this post
-	const categories = await getCategoriesCached();
-	const categoryNames = post.categories
-		.map((catId) => categories.find((cat) => cat.id === catId)?.name)
-		.filter(Boolean) as string[];
+	// Enrich category data for this post
+	const allCategories = await getCategoriesCached();
+	const categoryDetails = post.categories
+		.map((catId) => {
+			const cat = allCategories.find((c) => c.id === catId);
+			return cat
+				? {
+						id: cat.id,
+						name: cat.name,
+						slug: cat.slug
+					}
+				: null;
+		})
+		.filter((cat): cat is { id: number; name: string; slug: string } => Boolean(cat));
+	const categoryNames = categoryDetails.map((cat) => cat.name);
 
 	const publishedDate = new Date(post.date);
 	const dateline = publishedDate.toLocaleDateString('en-US', {
@@ -252,6 +265,7 @@ async function toInnovatorPost(post: WPPost): Promise<InnovatorPost> {
 		id: post.id,
 		relativeLink,
 		categoryNames,
+		categories: categoryDetails,
 		wpPostObject: post,
 		dateline,
 		byline,
@@ -298,6 +312,43 @@ export const getInnovatorPost = async (id: number | string): Promise<InnovatorPo
  * Get categories (cached)
  */
 export const getInnovatorCategories = getCategoriesCached;
+
+export const getInnovatorPostsByCategory = async (categoryId: number, query?: WPPostsQuery) => {
+	return getInnovatorPosts({ ...query, categories: categoryId });
+};
+
+export async function getCategoryBySlug(slug: string): Promise<WPCategory | null> {
+	const normalized = slug.toLowerCase();
+	if (categoryBySlugCache.has(normalized)) {
+		return categoryBySlugCache.get(normalized) ?? null;
+	}
+
+	const categories = await getCategoriesCached();
+	let category = categories.find((cat) => cat.slug.toLowerCase() === normalized) ?? null;
+
+	if (!category) {
+		const response = await getCategories({ slug: normalized, per_page: 1 });
+		category = response[0] ?? null;
+	}
+
+	if (category) {
+		categoryBySlugCache.set(normalized, category);
+	}
+
+	return category;
+}
+
+export const getInnovatorPostsByCategorySlug = async (
+	slug: string,
+	query?: WPPostsQuery
+): Promise<{ category: WPCategory | null; posts: InnovatorPost[] }> => {
+	const category = await getCategoryBySlug(slug);
+	if (!category) {
+		return { category: null, posts: [] };
+	}
+	const posts = await getInnovatorPosts({ ...query, categories: category.id });
+	return { category, posts };
+};
 
 export const getInnovatorPostsByTag = async (tagId: number, query?: WPPostsQuery) => {
 	return getInnovatorPosts({ ...query, tags: tagId });
@@ -383,7 +434,7 @@ export const getFrontPagePosts = async (): Promise<FrontPagePosts> => {
 	>();
 
 	const isHighlightedCategory = (post: InnovatorPost) =>
-		post.categoryNames?.some((name) => name?.toLowerCase().includes('highlight')) ?? false;
+		post.categories.some((cat) => cat.name?.toLowerCase().includes('highlight'));
 
 	const categorize = (post: InnovatorPost) => (isHighlightedCategory(post) ? 'highlighted' : 'others');
 
@@ -417,7 +468,8 @@ export const getFrontPagePosts = async (): Promise<FrontPagePosts> => {
 	};
 };
 
-function fixBrs(html: string): string {
+function fixBrs(html?: string | null): string {
+	if (!html) return '';
 	return html.replace(/<br\s*\/?>/gi, '<span class="line-break"><br></span>').trim();
 }
 

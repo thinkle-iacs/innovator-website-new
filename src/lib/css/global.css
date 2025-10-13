@@ -1,29 +1,79 @@
 /* This CSS doesn't use Svelte scoping and is just plain old global CSS */
-@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,200..900;1,200..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,200..900;1,200..900&family=Work+Sans:wght@300;400;500;600&display=swap');
 
 :root {
+	/* Typography */
+	--font-base: 'Crimson Pro', serif;
+	--font-heading: 'Crimson Pro', serif;
+	--font-sans: 'Work Sans', 'Helvetica Neue', Arial, sans-serif;
 	--article-width: 45rem;
-	--tag-color: #333;
-	--tag-text: #fafafa;
-	--text-highlight-color: #6e112a;
-	--text-color: #0f1626;
+
+	/* Palette */
+	--color-background: #f4f4f4;
+	--color-surface: #ffffff;
+	--color-border: #d9dce4;
+	--color-text: #0f1626;
+	--color-text-muted: #3c3f52;
+	--color-accent: #6e112a;
+	--color-accent-2: #363a42;
 	--link-color: #1949b1;
+	--link-hover-color: #102c73;
+	--meta-text: var(--color-text-muted);
+
+	/* Tag styling */
+	--tag-color: #1f2a44;
+	--tag-hover-color: #6e112a;
+	--tag-text: #f5f7ff;
+	--tag-hover-text: #ffffff;
+
+	/* Layout */
+	--page-padding: clamp(1rem, 3vw, 2rem);
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
 }
 
 body {
-	font-family: 'Crimson Pro', serif;
+	font-family: var(--font-base);
 	margin: 0;
 	padding: 0;
-	background-color: #f4f4f4;
-	color: var(--text-color);
-	line-height: 1.6;
+	background-color: var(--color-background);
+	color: var(--color-text);
+	line-height: 1.65;
 }
+
 a {
 	color: var(--link-color);
 	text-decoration: none;
 }
-a:hover {
+a:hover,
+a:focus {
 	text-decoration: underline;
+	color: var(--link-hover-color);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-family: var(--font-heading);
+	margin-top: 0;
+	color: var(--color-text);
+}
+
+p {
+	margin-top: 0;
+}
+
+img,
+video,
+iframe {
+	max-width: 100%;
 }
 
 @media (max-width: 800px) {
@@ -40,35 +90,4 @@ a:hover {
 	body {
 		font-size: 20px;
 	}
-}
-
-article p,
-article h1,
-article h2,
-article h3,
-article h4,
-article h5,
-article h6 {
-	margin-top: 0;
-	margin-bottom: 1em;
-	max-width: var(--article-width);
-}
-article .line-break {
-	display: block;
-	height: 1em;
-}
-
-article.full-post .content > p:first-of-type::first-letter {
-	font-size: 400%;
-	font-weight: bold;
-	line-height: 1;
-	margin-right: 0.1em;
-	float: left;
-	color: var(--text-highlight-color);
-}
-.content p:first-of-type::first-line {
-	font-variant: small-caps;
-}
-article.full-post .content > p:first-of-type::first-line {
-	font-weight: bold;
 }

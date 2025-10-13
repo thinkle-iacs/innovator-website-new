@@ -95,6 +95,9 @@
 </div>
 
 <style>
+	div {
+		font-family: var(--font-sans, 'Work Sans', sans-serif);
+	}
 	a {
 		text-decoration: none;
 		color: inherit;

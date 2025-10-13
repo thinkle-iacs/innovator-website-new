@@ -1,0 +1,20 @@
+.content {
+	max-width: var(--article-width, 45rem);
+	margin-inline: auto;
+}
+
+.content::after {
+	content: '';
+	display: block;
+	clear: both;
+}
+
+.content p:first-of-type::first-line {
+	font-variant: small-caps;
+	letter-spacing: 0.03em;
+}
+
+.line-break {
+	display: block;
+	height: 1rem;
+}

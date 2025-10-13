@@ -5,7 +5,6 @@
 	import Tags from './Tags.svelte';
 
 	let { post }: { post: InnovatorPost } = $props();
-	$inspect(post);
 	const stripHtml = (html: string) =>
 		html
 			.replace(/<[^>]*>/g, '')
@@ -61,16 +60,33 @@
 <style>
 	article {
 		max-width: var(--article-width, 45rem);
-		margin: auto;
+		margin: clamp(1rem, 4vw, 3rem) auto;
+		padding: clamp(1.5rem, 4vw, 3rem);
+		background: var(--color-surface, #ffffff);
+		border-radius: 1rem;
+		box-shadow: 0 10px 30px rgba(15, 22, 38, 0.08);
 	}
 	article h1 {
 		text-align: center;
 		margin-bottom: 0;
+		font-size: clamp(2rem, 5vw, 3.5rem);
 	}
 	.meta {
-		font-size: 0.8rem;
+		font-size: 0.85rem;
 		display: flex;
 		justify-content: space-between;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		font-family: var(--font-sans, 'Work Sans', sans-serif);
+		color: var(--meta-text, #3c3f52);
+	}
+
+	.meta .left,
+	.meta .right {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.75rem;
 	}
 
 	.content :global(img),
@@ -78,6 +94,7 @@
 	.content :global(video),
 	.content :global(figure) {
 		max-width: 100%;
+		height: auto;
 		margin-inline: auto;
 		display: block;
 	}
@@ -92,6 +109,7 @@
 		max-width: 100%;
 		width: 100%;
 		aspect-ratio: 16 / 9;
+		height: auto;
 	}
 
 	.featured-image {
@@ -103,12 +121,23 @@
 		display: block;
 		max-width: 100%;
 		margin: 0 auto;
+		height: auto;
 	}
 
 	.featured-image figcaption {
 		margin-top: 0.5rem;
 		font-size: 0.9rem;
-		color: #555;
+		font-family: var(--font-sans, 'Work Sans', sans-serif);
+		color: var(--meta-text, #3c3f52);
 		text-align: center;
+	}
+
+	.content :global(p:first-of-type::first-letter) {
+		font-size: clamp(2.5rem, 6vw, 4rem);
+		font-weight: 600;
+		line-height: 1;
+		margin-right: 0.2em;
+		float: left;
+		color: var(--color-accent, #6e112a);
 	}
 </style>
