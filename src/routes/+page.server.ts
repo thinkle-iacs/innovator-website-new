@@ -13,7 +13,7 @@ export const load: PageServerLoad = async () => {
 		return {
 			frontPage: {
 				currentYear: { highlighted: [], others: [] },
-				prevYears: { highlighted: [], others: [] }
+				prevYears: []
 			}
 		};
 	}

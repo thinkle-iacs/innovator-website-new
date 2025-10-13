@@ -22,8 +22,14 @@
 			href: 'https://drive.google.com/drive/folders/1jOjAr6JwbWkIW4-ADW7dhXuJnBHiRK0Q?usp=share_link',
 			label: 'V16: 2022-23'
 		},
-		{ label: 'V15: 2021-22 (Online only)' },
-		{ label: 'V14: 2020-21 (Online only)' },
+		{
+			href: '/school-year/21-22',
+			label: 'V15: 2021-22 (Online only)'
+		},
+		{
+			href: '/school-year/20-21',
+			label: 'V14: 2020-21 (Online only)'
+		},
 		{
 			href: 'https://drive.google.com/drive/folders/1Z98rL-Wew48JcPb-Vo19MYFpnDCBrSGE?usp=share_link',
 			label: 'V13 2019-20'

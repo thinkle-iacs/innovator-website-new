@@ -155,6 +155,28 @@ export function schoolYearFromDate(date: Date): string {
 	return `${formatYear(startYear)}-${formatYear(endYear)}`;
 }
 
+export function schoolYearBounds(year: string): { start: Date; end: Date } {
+	const match = year.match(/^(\d{2})-(\d{2})$/);
+	if (!match) {
+		throw new Error(`Invalid school year format: ${year}`);
+	}
+
+	const [startShort, endShort] = match.slice(1);
+	const startYearShort = Number.parseInt(startShort, 10);
+	const startYear = startYearShort >= 70 ? 1900 + startYearShort : 2000 + startYearShort;
+	const endYear = startYear + 1;
+	const expectedEndShort = String(endYear).slice(-2);
+
+	if (expectedEndShort !== endShort) {
+		throw new Error(`School year end ${endShort} does not follow start ${startShort}`);
+	}
+
+	const startDate = new Date(Date.UTC(startYear, 6, 1, 0, 0, 0)); // July 1st
+	const endDate = new Date(Date.UTC(endYear, 5, 30, 23, 59, 59, 999)); // June 30th
+
+	return { start: startDate, end: endDate };
+}
+
 /**
  * Extract URL from HTML anchor tag
  * Example: <a href="https://example.com/path">text</a> -> /path
@@ -306,6 +328,20 @@ export const getInnovatorPostsByTagSlug = async (
 	return { tag, posts };
 };
 
+export const getInnovatorPostsBySchoolYear = async (
+	year: string,
+	query?: WPPostsQuery
+): Promise<InnovatorPost[]> => {
+	const { start, end } = schoolYearBounds(year);
+	return getInnovatorPosts({
+		order: 'desc',
+		after: start.toISOString(),
+		before: end.toISOString(),
+		per_page: 100,
+		...(query ?? {})
+	});
+};
+
 /**
  * Utility function to extract paths from HTML content
  * Useful if you have HTML content with links you want to process
@@ -329,7 +365,7 @@ export const currentSchoolYear = schoolYearFromDate(new Date());
 
 export type FrontPagePosts = {
 	currentYear: { highlighted: InnovatorPost[]; others: InnovatorPost[] };
-	prevYears: { highlighted: InnovatorPost[]; others: InnovatorPost[] };
+	prevYears: Array<{ year: string; highlighted: InnovatorPost[]; others: InnovatorPost[] }>;
 };
 
 // Get posts from *this school year* for front page, with "highlighted" posts first
@@ -337,15 +373,47 @@ export const getFrontPagePosts = async (): Promise<FrontPagePosts> => {
 	const posts = await getInnovatorPosts({ per_page: 30 });
 	const thisYear = posts.filter((p) => p.schoolYear === currentSchoolYear);
 	const prevYears = posts.filter((p) => p.schoolYear !== currentSchoolYear);
+	const prevYearGroups = new Map<
+		string,
+		{
+			highlighted: InnovatorPost[];
+			others: InnovatorPost[];
+			startYear: number;
+		}
+	>();
+
+	const isHighlightedCategory = (post: InnovatorPost) =>
+		post.categoryNames?.some((name) => name?.toLowerCase().includes('highlight')) ?? false;
+
+	const categorize = (post: InnovatorPost) => (isHighlightedCategory(post) ? 'highlighted' : 'others');
+
+	for (const post of prevYears) {
+		let group = prevYearGroups.get(post.schoolYear);
+		if (!group) {
+			const published = new Date(post.wpPostObject.date);
+			const month = published.getMonth();
+			const year = published.getFullYear();
+			const startYear = month >= 6 ? year : year - 1;
+			group = { highlighted: [], others: [], startYear };
+			prevYearGroups.set(post.schoolYear, group);
+		}
+		group[categorize(post)].push(post);
+	}
+
+	const prevYearsSorted = Array.from(prevYearGroups.entries())
+		.sort((a, b) => b[1].startYear - a[1].startYear)
+		.map(([year, { highlighted, others }]) => ({
+			year,
+			highlighted,
+			others
+		}));
+
 	return {
 		currentYear: {
-			highlighted: thisYear.filter((p) => p.categoryNames?.includes('Highlighted')),
-			others: thisYear.filter((p) => !p.categoryNames?.includes('Highlighted'))
+			highlighted: thisYear.filter(isHighlightedCategory),
+			others: thisYear.filter((p) => !isHighlightedCategory(p))
 		},
-		prevYears: {
-			highlighted: prevYears.filter((p) => p.categoryNames?.includes('Highlighted')),
-			others: prevYears.filter((p) => !p.categoryNames?.includes('Highlighted'))
-		}
+		prevYears: prevYearsSorted
 	};
 };
 

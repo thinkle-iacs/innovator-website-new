@@ -2,6 +2,7 @@
 	import type { InnovatorPost } from '$lib/api';
 	import Dateline from './Dateline.svelte';
 	import Byline from './Byline.svelte';
+	import Tags from './Tags.svelte';
 
 	let { post }: { post: InnovatorPost } = $props();
 	$inspect(post);
@@ -26,8 +27,13 @@
 <article class="full-post">
 	<h1>{@html post.title}</h1>
 	<div class="meta">
-		<Dateline {post} />
-		<Byline {post} />
+		<div class="left">
+			<Dateline {post} />
+			<Byline {post} />
+		</div>
+		<div class="right">
+			<Tags {post} />
+		</div>
 	</div>
 	{#if shouldShowFeaturedVideo()}
 		<div class="featured-video">
@@ -53,20 +59,18 @@
 </article>
 
 <style>
-	.full-post {
-		display: grid;
-		gap: 1rem;
-		margin-inline: auto;
-		max-width: 60rem;
-		padding: 1rem;
+	article {
+		max-width: var(--article-width, 45rem);
+		margin: auto;
 	}
-
+	article h1 {
+		text-align: center;
+		margin-bottom: 0;
+	}
 	.meta {
+		font-size: 0.8rem;
 		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-		color: #444;
-		font-size: 0.95rem;
+		justify-content: space-between;
 	}
 
 	.content :global(img),

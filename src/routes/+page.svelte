@@ -1,13 +1,12 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
-	import type { InnovatorPost } from '$lib/api';
-	import Mission from '$lib/components/Mission.svelte';
-	import PastIssues from '$lib/components/PastIssues.svelte';
-	import Snippet from '$lib/components/Snippet.svelte';
+import Mission from '$lib/components/Mission.svelte';
+import PastIssues from '$lib/components/PastIssues.svelte';
+import Snippet from '$lib/components/Snippet.svelte';
 
 	// Use the generated PageData type so the shape matches your server load.
-	let { data }: PageProps = $props();
-	console.log(data);
+let { data }: PageProps = $props();
+const { frontPage } = data;
 </script>
 
 <div class="full-page">
@@ -19,20 +18,25 @@
 	</div>
 	<aside class="left"></aside>
 	<main>
-		{#each data.frontPage.currentYear.highlighted as post}
+		{#each frontPage.currentYear.highlighted as post}
 			<Snippet {post} />
 		{/each}
-		{#each data.frontPage.currentYear.others as post}
+		{#each frontPage.currentYear.others as post}
 			<Snippet {post} />
 		{/each}
-		{#if data.frontPage.prevYears.highlighted || data.frontPage.prevYears.others}
-			<h2>From Previous Years</h2>
-			{#each data.frontPage.prevYears.highlighted as post}
-				<Snippet {post} />
-			{/each}
-			{#each data.frontPage.prevYears.others as post}
-				<Snippet {post} />
-			{/each}
+		{#if frontPage.prevYears.length > 0}
+			<section class="previous-years">
+				<h2>From Previous Years</h2>
+				{#each frontPage.prevYears as group}
+					<h3>{group.year}</h3>
+					{#each group.highlighted as post}
+						<Snippet {post} />
+					{/each}
+					{#each group.others as post}
+						<Snippet {post} />
+					{/each}
+				{/each}
+			</section>
 		{/if}
 	</main>
 	<aside class="right">
@@ -53,9 +57,12 @@
 	}
 	.right {
 		grid-area: right;
-		position: sticky;
+		/* Was going to stick but then it's not all visible, which is bad.
+    We could put a max-height and an overflow-y on it, but then we have two
+    scrolling boxes which is awkward */
+		/* 	position: sticky;
 		align-self: start;
-		top: 16px;
+		top: 16px; */
 	}
 	.banner {
 		grid-area: banner;
