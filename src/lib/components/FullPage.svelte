@@ -70,6 +70,7 @@
 		text-align: center;
 		margin-bottom: 0;
 		font-size: clamp(2rem, 5vw, 3.5rem);
+		line-height: 1.1;
 	}
 	.meta {
 		font-size: 0.85rem;
