@@ -1,7 +1,7 @@
 /* A convenience wrapper around the raw WP API */
 
-import type { WPPost, WPPostsQuery, WPCategory, WPUser } from '$lib/wp-api';
-import { getPosts, getPost, getCategories, getUser } from '$lib/wp-api';
+import type { WPPost, WPPostsQuery, WPCategory, WPUser, WPTag } from '$lib/wp-api';
+import { getPosts, getPost, getCategories, getTags, getUser } from '$lib/wp-api';
 
 interface InnovatorPost {
 	// Core content fields (extracted for convenience)
@@ -16,6 +16,8 @@ interface InnovatorPost {
 	dateline: string;
 	byline: string;
 	schoolYear: string;
+	contentHasFeaturedImage: boolean;
+	contentHasFeaturedVideo: boolean;
 
 	// Reference to original WP post
 	wpPostObject: WPPost;
@@ -23,6 +25,7 @@ interface InnovatorPost {
 	// Optional media fields
 	featuredVideo?: string;
 	featuredImage?: string;
+	featuredImageAlt?: string;
 }
 
 // Cache for categories to avoid repeated API calls
@@ -31,6 +34,9 @@ let categoriesPromise: Promise<WPCategory[]> | null = null;
 
 // Cache for authors to avoid repeated API calls
 const authorsCache: Map<number, { id: number; name: string; slug: string }> = new Map();
+
+// Cache tag lookups by slug since WP REST doesn't provide them with posts
+const tagBySlugCache: Map<string, WPTag> = new Map();
 
 // Author name overrides for known posts
 const authorOverrides: Record<number, string> = {
@@ -133,6 +139,14 @@ function extractFeaturedVideoUrl(html: string): string | undefined {
 	return undefined;
 }
 
+function extractFeaturedImage(post: WPPost): { url?: string; alt?: string } {
+	const media = post._embedded?.['wp:featuredmedia']?.[0];
+	if (!media) return {};
+	const url = media.source_url || media.media_details?.sizes?.full?.source_url;
+	const alt = media.alt_text?.trim() || media.title?.rendered?.replace(/<[^>]*>/g, '').trim();
+	return { url: url || undefined, alt: alt || undefined };
+}
+
 export function schoolYearFromDate(date: Date): string {
 	const month = date.getMonth(); // 0-indexed; July is 6
 	const startYear = month >= 6 ? date.getFullYear() : date.getFullYear() - 1;
@@ -181,6 +195,7 @@ async function getCategoriesCached(): Promise<WPCategory[]> {
  */
 async function toInnovatorPost(post: WPPost): Promise<InnovatorPost> {
 	const relativeLink = extractPathFromUrl(post.link);
+	const contentHtml = post.content.rendered ?? '';
 
 	// Get category names for this post
 	const categories = await getCategoriesCached();
@@ -195,7 +210,10 @@ async function toInnovatorPost(post: WPPost): Promise<InnovatorPost> {
 		day: 'numeric'
 	});
 	const schoolYear = schoolYearFromDate(publishedDate);
-	const featuredVideo = extractFeaturedVideoUrl(post.content.rendered);
+	const featuredVideo = extractFeaturedVideoUrl(contentHtml);
+	const { url: featuredImage, alt: featuredImageAlt } = extractFeaturedImage(post);
+	const contentHasFeaturedImage = Boolean(featuredImage && contentHtml.includes(featuredImage));
+	const contentHasFeaturedVideo = Boolean(featuredVideo && contentHtml.includes(featuredVideo));
 
 	// Extract embedded author data if available (from Molongui Authorship plugin)
 	const embeddedAuthor = post._embedded?.author?.[0];
@@ -205,8 +223,8 @@ async function toInnovatorPost(post: WPPost): Promise<InnovatorPost> {
 	const byline = author.name == 'admin' ? 'Innovator Staff' : author.name;
 
 	return {
-		content: post.content.rendered,
-		excerpt: post.excerpt.rendered,
+		content: fixBrs(post.content.rendered),
+		excerpt: fixBrs(post.excerpt.rendered),
 		title: post.title.rendered,
 		author,
 		id: post.id,
@@ -216,7 +234,11 @@ async function toInnovatorPost(post: WPPost): Promise<InnovatorPost> {
 		dateline,
 		byline,
 		schoolYear,
-		featuredVideo
+		contentHasFeaturedImage,
+		contentHasFeaturedVideo,
+		featuredVideo,
+		featuredImage,
+		featuredImageAlt
 	};
 }
 
@@ -254,6 +276,35 @@ export const getInnovatorPost = async (id: number | string): Promise<InnovatorPo
  * Get categories (cached)
  */
 export const getInnovatorCategories = getCategoriesCached;
+
+export const getInnovatorPostsByTag = async (tagId: number, query?: WPPostsQuery) => {
+	return getInnovatorPosts({ ...query, tags: tagId });
+};
+
+export async function getTagBySlug(slug: string): Promise<WPTag | null> {
+	const normalized = slug.toLowerCase();
+	if (tagBySlugCache.has(normalized)) {
+		return tagBySlugCache.get(normalized) ?? null;
+	}
+	const tags = await getTags({ slug: normalized, per_page: 1 });
+	const tag = tags[0] ?? null;
+	if (tag) {
+		tagBySlugCache.set(normalized, tag);
+	}
+	return tag;
+}
+
+export const getInnovatorPostsByTagSlug = async (
+	slug: string,
+	query?: WPPostsQuery
+): Promise<{ tag: WPTag | null; posts: InnovatorPost[] }> => {
+	const tag = await getTagBySlug(slug);
+	if (!tag) {
+		return { tag: null, posts: [] };
+	}
+	const posts = await getInnovatorPosts({ ...query, tags: tag.id });
+	return { tag, posts };
+};
 
 /**
  * Utility function to extract paths from HTML content
@@ -298,9 +349,13 @@ export const getFrontPagePosts = async (): Promise<FrontPagePosts> => {
 	};
 };
 
+function fixBrs(html: string): string {
+	return html.replace(/<br\s*\/?>/gi, '<span class="line-break"><br></span>').trim();
+}
+
 // Re-export the raw WP functions for when you need them
-export { getPosts, getPost, getPages, getCategories } from '$lib/wp-api';
-export type { WPPost, WPPostsQuery, WPCategory } from '$lib/wp-api';
+export { getPosts, getPost, getPages, getCategories, getTags } from '$lib/wp-api';
+export type { WPPost, WPPostsQuery, WPCategory, WPTag } from '$lib/wp-api';
 
 // Export our enhanced types
 export type { InnovatorPost };

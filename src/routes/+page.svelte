@@ -7,6 +7,7 @@
 
 	// Use the generated PageData type so the shape matches your server load.
 	let { data }: PageProps = $props();
+	console.log(data);
 </script>
 
 <div class="full-page">
@@ -18,7 +19,6 @@
 	</div>
 	<aside class="left"></aside>
 	<main>
-		<h1>The Innovator</h1>
 		{#each data.frontPage.currentYear.highlighted as post}
 			<Snippet {post} />
 		{/each}
@@ -53,6 +53,9 @@
 	}
 	.right {
 		grid-area: right;
+		position: sticky;
+		align-self: start;
+		top: 16px;
 	}
 	.banner {
 		grid-area: banner;

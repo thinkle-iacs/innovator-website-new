@@ -34,6 +34,38 @@ export interface WPFeaturedImageCaption {
 	source_url: string;
 }
 
+export interface WPFeaturedMedia {
+	id: number;
+	date: string;
+	slug: string;
+	type: string;
+	link: string;
+	title: WPRenderedContent;
+	author: number;
+	alt_text: string;
+	caption: WPRenderedContent;
+	description: WPRenderedContent;
+	media_type: string;
+	mime_type: string;
+	media_details?: {
+		width?: number;
+		height?: number;
+		file?: string;
+		sizes?: Record<
+			string,
+			{
+				file: string;
+				width: number;
+				height: number;
+				mime_type: string;
+				source_url: string;
+			}
+		>;
+	};
+	source_url: string;
+	[key: string]: unknown;
+}
+
 export interface WPLink {
 	href: string;
 	targetHints?: {
@@ -61,6 +93,19 @@ export interface WPLinks {
 }
 
 export interface WPCategory {
+	id: number;
+	count: number;
+	description: string;
+	link: string;
+	name: string;
+	slug: string;
+	taxonomy: string;
+	parent: number;
+	meta: unknown[];
+	_links: unknown;
+}
+
+export interface WPTag {
 	id: number;
 	count: number;
 	description: string;
@@ -121,6 +166,7 @@ export interface WPPost {
 			avatar_urls?: Record<string, string>;
 			_links?: Record<string, unknown>;
 		}>;
+		'wp:featuredmedia'?: WPFeaturedMedia[];
 	};
 }
 
@@ -171,6 +217,7 @@ export interface WPUser {
 // Centralised API base for the WordPress REST API. Set this in your env as
 // PUBLIC_WP_API_BASE (example in project root .env or .env.example).
 const BASE = (env.PUBLIC_WP_API_BASE || 'https://theinnovator.org/wp-json').replace(/\/+$/u, '');
+const DEFAULT_EMBEDS: Array<string> = ['author', 'wp:featuredmedia'];
 
 function joinPath(base: string, path: string) {
 	if (!path) return base;
@@ -216,18 +263,18 @@ function qs(obj: Record<string, unknown> | URLSearchParams | undefined) {
 
 function withDefaultEmbed(
 	query: Record<string, unknown> | undefined,
-	defaultEmbed: string | string[]
-): Record<string, unknown> {
-	const params = { ...(query ?? {}) };
-	if (params._embed == null) {
-		params._embed = defaultEmbed;
-	}
+		defaultEmbed: string | string[]
+	): Record<string, unknown> {
+		const params = { ...(query ?? {}) };
+		if (params._embed == null) {
+			params._embed = defaultEmbed;
+		}
 	return params;
 }
 
 // Convenience helpers for common WP endpoints. You can expand these as needed.
 export async function getPosts(query?: WPPostsQuery): Promise<WPPost[]> {
-	const queryWithEmbed = withDefaultEmbed(query as Record<string, unknown> | undefined, 'author');
+	const queryWithEmbed = withDefaultEmbed(query as Record<string, unknown> | undefined, DEFAULT_EMBEDS);
 	return apiFetch(`wp/v2/posts${qs(queryWithEmbed)}`);
 }
 
@@ -235,7 +282,7 @@ export async function getPost(
 	id: number | string,
 	query?: Record<string, unknown>
 ): Promise<WPPost> {
-	const queryWithEmbed = withDefaultEmbed(query, 'author');
+	const queryWithEmbed = withDefaultEmbed(query, DEFAULT_EMBEDS);
 	return apiFetch(`wp/v2/posts/${id}${qs(queryWithEmbed)}`);
 }
 
@@ -249,6 +296,11 @@ export async function getCategories(query?: Record<string, unknown>): Promise<WP
 	return apiFetch(`wp/v2/categories${q}`);
 }
 
+export async function getTags(query?: Record<string, unknown>): Promise<WPTag[]> {
+	const q = qs(query);
+	return apiFetch(`wp/v2/tags${q}`);
+}
+
 export async function getUser(id: number | string): Promise<WPUser> {
 	return apiFetch(`wp/v2/users/${id}`);
 }
@@ -259,5 +311,6 @@ export default {
 	getPost,
 	getPages,
 	getCategories,
+	getTags,
 	getUser
 };

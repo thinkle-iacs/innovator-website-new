@@ -3,17 +3,53 @@
 	import Dateline from './Dateline.svelte';
 	import Byline from './Byline.svelte';
 	let { post }: { post: InnovatorPost } = $props();
-	let isTiny = post.content.length < 500;
+
+	const stripHtml = (html: string) =>
+		html
+			.replace(/<[^>]*>/g, '')
+			.replace(/\s+/g, ' ')
+			.trim();
+	const isTiny = (p: InnovatorPost) => p.content.length < 500;
+	const getFeaturedImageAlt = (p: InnovatorPost) => {
+		if (p.featuredImageAlt) return p.featuredImageAlt;
+		const title = stripHtml(p.title);
+		return title ? `Featured image for ${title}` : 'Featured image';
+	};
+	const shouldShowFeaturedImage = (p: InnovatorPost) =>
+		Boolean(p.featuredImage && !p.contentHasFeaturedImage);
+	const shouldShowFeaturedVideo = (p: InnovatorPost) =>
+		Boolean(p.featuredVideo && !p.contentHasFeaturedVideo);
 </script>
 
-<article>
-	<h2><a href={post.relativeLink}>{@html post.title}</a></h2>
+<article class="snippet">
+	<h3><a href={post.relativeLink}>{@html post.title}</a></h3>
 	<Dateline {post} />
 	<Byline {post} />
-	{#if isTiny}
-		<div class="page">{@html post.content}</div>
+	{#if isTiny(post)}
+		<div class="page">
+			{#if shouldShowFeaturedImage(post)}
+				<div class="featured-image-container">
+					<a href={post.relativeLink}>
+						<img src={post.featuredImage} alt={getFeaturedImageAlt(post)} />
+					</a>
+				</div>
+			{/if}
+			{#if shouldShowFeaturedVideo(post)}
+				<div class="featured-video-container">
+					<iframe
+						src={post.featuredVideo}
+						title="YouTube video player"
+						frameborder="0"
+						allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in
+-picture; web-share"
+						allowfullscreen
+					></iframe>
+				</div>
+			{/if}
+			{@html post.content}
+		</div>
 	{:else}
-		{#if post.featuredVideo}
+		{#if shouldShowFeaturedVideo(post)}
 			<div class="video-container">
 				<iframe
 					src={post.featuredVideo}
@@ -23,15 +59,24 @@
 					allowfullscreen
 				></iframe>
 			</div>
-		{:else if post.featuredImage}
-			<img src={post.featuredImage} alt="Featured image for {post.title}" />
+		{:else if shouldShowFeaturedImage(post)}
+			<div class="featured-image-container">
+				<img src={post.featuredImage} alt={getFeaturedImageAlt(post)} />
+			</div>
 		{/if}
 		<div class="excerpt">{@html post.excerpt}</div>
+		<div class="read-more">
+			<a href={post.relativeLink}>Read More</a>
+		</div>
 	{/if}
 </article>
 
 <style>
-	h2 a {
+	article {
+		padding-bottom: 16px;
+		border-bottom: 1px solid #19243d;
+	}
+	h3 a {
 		text-decoration: none;
 		color: inherit;
 	}
@@ -40,11 +85,22 @@
 	img,
 	article :global(img) {
 		max-width: 100%;
+		width: min(400px, 100%);
 	}
 	iframe,
 	video,
 	:global(video, iframe) {
 		aspect-ratio: 16 / 9;
 		height: auto;
+	}
+	.featured-image-container {
+		text-align: center;
+	}
+	.read-more {
+		font-style: italic;
+		text-align: right;
+	}
+	h3 {
+		margin-bottom: 0;
 	}
 </style>
