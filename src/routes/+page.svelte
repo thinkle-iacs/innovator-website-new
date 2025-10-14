@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Links from '$lib/components/Links.svelte';
+
 	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 	import type { PageProps } from './$types';
@@ -157,6 +159,7 @@
 	<aside class="right">
 		<Mission />
 		<PastIssues />
+		<Links></Links>
 	</aside>
 </div>
 
