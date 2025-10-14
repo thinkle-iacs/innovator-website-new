@@ -5,7 +5,7 @@
 <header class="header">
 	<a class="brand" href="/">
 		<img
-			src="https://theinnovator.org/wp-content/uploads/2020/04/Horizontal-Logo-PNG.png"
+			src="https://wp.theinnovator.org/wp-content/uploads/2020/04/Horizontal-Logo-PNG.png"
 			alt="The Innovator"
 			loading="lazy"
 		/>
