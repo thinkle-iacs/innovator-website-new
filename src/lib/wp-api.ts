@@ -118,6 +118,15 @@ export interface WPTag {
 	_links: unknown;
 }
 
+export interface WPEmbeddedTerm {
+	id: number;
+	link: string;
+	name: string;
+	slug: string;
+	taxonomy: string;
+	_links: Record<string, unknown>;
+}
+
 export interface WPPost {
 	id: number;
 	date: string;
@@ -167,6 +176,11 @@ export interface WPPost {
 			_links?: Record<string, unknown>;
 		}>;
 		'wp:featuredmedia'?: WPFeaturedMedia[];
+		/**
+		 * Embedded terms by taxonomy. Usually a 2-tuple: [categories[], tags[]].
+		 * See WP REST `_embed=1` responses.
+		 */
+		'wp:term'?: WPEmbeddedTerm[][];
 	};
 }
 
@@ -217,7 +231,9 @@ export interface WPUser {
 // Centralised API base for the WordPress REST API. Set this in your env as
 // PUBLIC_WP_API_BASE (example in project root .env or .env.example).
 const BASE = (env.PUBLIC_WP_API_BASE || 'https://wp.theinnovator.org/wp-json').replace(/\/+$/u, '');
-const DEFAULT_EMBEDS: Array<string> = ['author', 'wp:featuredmedia'];
+// WordPress REST API supports `_embed=1` (embed all embeddable links). It does not support
+// selecting individual embedded relations via an array of values.
+const DEFAULT_EMBED = true;
 
 function joinPath(base: string, path: string) {
 	if (!path) return base;
@@ -268,7 +284,7 @@ function qs(obj: Record<string, unknown> | URLSearchParams | undefined) {
 
 function withDefaultEmbed(
 	query: Record<string, unknown> | undefined,
-	defaultEmbed: string | string[]
+	defaultEmbed: boolean
 ): Record<string, unknown> {
 	const params = { ...(query ?? {}) };
 	if (params._embed == null) {
@@ -290,7 +306,7 @@ export interface WPCollectionResult<T> extends WPCollectionMeta {
 export async function getPostsWithMeta(query?: WPPostsQuery): Promise<WPCollectionResult<WPPost>> {
 	const queryWithEmbed = withDefaultEmbed(
 		query as Record<string, unknown> | undefined,
-		DEFAULT_EMBEDS
+		DEFAULT_EMBED
 	);
 	const res = await apiFetchResponse(`wp/v2/posts${qs(queryWithEmbed)}`);
 	const total = Number.parseInt(res.headers.get('x-wp-total') ?? '0', 10);
@@ -312,7 +328,7 @@ export async function getPost(
 	id: number | string,
 	query?: Record<string, unknown>
 ): Promise<WPPost> {
-	const queryWithEmbed = withDefaultEmbed(query, DEFAULT_EMBEDS);
+	const queryWithEmbed = withDefaultEmbed(query, DEFAULT_EMBED);
 	return apiFetch(`wp/v2/posts/${id}${qs(queryWithEmbed)}`);
 }
 

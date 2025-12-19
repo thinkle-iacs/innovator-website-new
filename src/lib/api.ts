@@ -10,13 +10,18 @@ import type {
 } from '$lib/wp-api';
 import { getPosts, getPost, getCategories, getTags, getUser, getPostsWithMeta } from '$lib/wp-api';
 
-interface InnovatorPost {
+export interface InnovatorPost {
 	// Core content fields (extracted for convenience)
 	content: string;
 	excerpt: string;
 	title: string;
 	id: number;
 	author: { id: number; name: string; slug: string };
+	/**
+	 * Convenience access to embedded WP REST payload (e.g. `_embedded.author`, `_embedded['wp:term']`).
+	 * This is the same object as `wpPostObject._embedded`.
+	 */
+	_embedded?: WPPost['_embedded'];
 	// Enhanced fields
 	relativeLink?: string;
 	categoryNames?: string[];
@@ -257,6 +262,7 @@ async function toInnovatorPost(post: WPPost): Promise<InnovatorPost> {
 		excerpt: fixBrs(post.excerpt.rendered),
 		title: post.title.rendered,
 		author,
+		_embedded: post._embedded,
 		id: post.id,
 		relativeLink,
 		categoryNames,
@@ -510,6 +516,3 @@ function fixBrs(html?: string | null): string {
 // Re-export the raw WP functions for when you need them
 export { getPosts, getPost, getPages, getCategories, getTags } from '$lib/wp-api';
 export type { WPPost, WPPostsQuery, WPCategory, WPTag } from '$lib/wp-api';
-
-// Export our enhanced types
-export type { InnovatorPost, PaginatedInnovatorPosts };
