@@ -13,10 +13,11 @@
 	}
 
 	let embeddedAuthors = post._embedded?.author?.map((author) => normalizeBylineText(author.name));
+	let forceShowViewCount = $state(false);
 </script>
 
 {#if embeddedAuthors?.length}
-	<div class="byline">
+	<div class="byline" ondblclick={() => (forceShowViewCount = true)}>
 		{#if embeddedAuthors.length === 1}
 			By {embeddedAuthors[0]}
 		{:else if embeddedAuthors.length === 2}
@@ -31,4 +32,9 @@
 	</div>
 {:else}
 	<div class="byline">{@html post.byline}</div>
+{/if}
+{#if post.wpPostObject.meta.headless_views > 10 || forceShowViewCount}
+	<div class="view-count">
+		{post.wpPostObject.meta.headless_views} views
+	</div>
 {/if}

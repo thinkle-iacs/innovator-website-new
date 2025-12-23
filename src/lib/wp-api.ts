@@ -26,6 +26,7 @@ export interface WPMeta {
 	itunes_episode_type?: string;
 	filesize_raw?: string;
 	footnotes?: string;
+	headless_views?: number;
 }
 
 export interface WPFeaturedImageCaption {

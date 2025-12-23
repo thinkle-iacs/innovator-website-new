@@ -22,6 +22,18 @@ add_action('rest_api_init', function () {
 });
 
 /**
+ * Register headless_views post meta
+ */
+add_action('init', function () {
+  register_post_meta('post', 'headless_views', [
+    'type'         => 'integer',
+    'single'       => true,
+    'show_in_rest' => true,
+    'default'      => 0,
+  ]);
+});
+
+/**
  * Add headless views column to posts list
  */
 add_filter('manage_posts_columns', function ($columns) {
