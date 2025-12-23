@@ -1,9 +1,12 @@
 <script lang="ts">
 	import type { InnovatorPost } from '$lib/api';
+	import { reportView } from '$lib/reportView';
 	import Dateline from './Dateline.svelte';
 	import Byline from './Byline.svelte';
 	import Tags from './Tags.svelte';
+
 	let { post }: { post: InnovatorPost } = $props();
+	let element = $state<HTMLArticleElement | null>(null);
 
 	const stripHtml = (html: string) =>
 		html
@@ -20,9 +23,14 @@
 		Boolean(p.featuredImage && !p.contentHasFeaturedImage);
 	const shouldShowFeaturedVideo = (p: InnovatorPost) =>
 		Boolean(p.featuredVideo && !p.contentHasFeaturedVideo);
+
+	// Report view when user clicks within the snippet
+	function handleClick() {
+		reportView(post.id);
+	}
 </script>
 
-<article class="snippet">
+<article class="snippet" bind:this={element} onclick={handleClick}>
 	<h3><a href={post.relativeLink}>{@html post.title}</a></h3>
 	<div class="meta">
 		<div class="details">

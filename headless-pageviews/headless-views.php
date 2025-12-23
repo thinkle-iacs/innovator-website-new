@@ -22,6 +22,47 @@ add_action('rest_api_init', function () {
 });
 
 /**
+ * Add headless views column to posts list
+ */
+add_filter('manage_posts_columns', function ($columns) {
+  $columns['headless_views'] = 'Headless Views';
+  return $columns;
+});
+
+/**
+ * Populate headless views column
+ */
+add_action('manage_posts_custom_column', function ($column, $post_id) {
+  if ($column === 'headless_views') {
+    $views = (int) get_post_meta($post_id, 'headless_views', true);
+    echo $views ? $views : '0';
+  }
+}, 10, 2);
+
+/**
+ * Make headless views column sortable
+ */
+add_filter('manage_edit-post_sortable_columns', function ($columns) {
+  $columns['headless_views'] = 'headless_views';
+  return $columns;
+});
+
+/**
+ * Handle sorting by headless views
+ */
+add_action('pre_get_posts', function ($query) {
+  if (!is_admin()) {
+    return;
+  }
+
+  $orderby = $query->get('orderby');
+  if ($orderby === 'headless_views') {
+    $query->set('meta_key', 'headless_views');
+    $query->set('orderby', 'meta_value_num');
+  }
+});
+
+/**
  * Handle view increment
  */
 function headless_register_view(WP_REST_Request $request) {
