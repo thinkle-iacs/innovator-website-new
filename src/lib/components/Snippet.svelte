@@ -14,6 +14,7 @@
 			.replace(/\s+/g, ' ')
 			.trim();
 	const isTiny = (p: InnovatorPost) => p.content.length < 500;
+	const getSnippetHtml = (p: InnovatorPost) => (isTiny(p) ? p.content : p.excerpt);
 	const getFeaturedImageAlt = (p: InnovatorPost) => {
 		if (p.featuredImageAlt) return p.featuredImageAlt;
 		const title = stripHtml(p.title);
@@ -21,8 +22,13 @@
 	};
 	const shouldShowFeaturedImage = (p: InnovatorPost) =>
 		Boolean(p.featuredImage && !p.contentHasFeaturedImage);
+	const snippetHasFeaturedVideo = (p: InnovatorPost) => {
+		if (!p.featuredVideo) return false;
+		const snippetHtml = getSnippetHtml(p);
+		return snippetHtml.includes(p.featuredVideo);
+	};
 	const shouldShowFeaturedVideo = (p: InnovatorPost) =>
-		Boolean(p.featuredVideo && !p.contentHasFeaturedVideo);
+		Boolean(p.featuredVideo && !snippetHasFeaturedVideo(p));
 
 	// Report view when user clicks within the snippet
 	function handleClick() {
