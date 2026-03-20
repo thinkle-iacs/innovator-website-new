@@ -19,6 +19,7 @@
 	let pagination = $state<PaginationState>(data.pagination);
 	let isLoading = $state(false);
 	let loadError = $state<string | null>(null);
+	let isSidebarOpen = $state(false);
 
 	let sentinel = $state<HTMLDivElement | null>(null);
 	let observer = $state<IntersectionObserver | null>(null);
@@ -86,13 +87,35 @@
 		};
 	});
 
+	onMount(() => {
+		if (!browser || typeof window.matchMedia !== 'function') {
+			return;
+		}
+
+		const desktopMediaQuery = window.matchMedia('(min-width: 1024px)');
+		const handleViewportChange = (event: MediaQueryListEvent) => {
+			if (event.matches) {
+				isSidebarOpen = false;
+			}
+		};
+
+		desktopMediaQuery.addEventListener('change', handleViewportChange);
+
+		return () => {
+			desktopMediaQuery.removeEventListener('change', handleViewportChange);
+		};
+	});
+
 	$effect(() => {
 		frontPage = data.frontPage;
 		posts = [...data.initialPosts];
 		pagination = data.pagination;
 		isLoading = false;
 		loadError = null;
+		isSidebarOpen = false;
 	});
+
+	console.log($state.snapshot(data.initialPosts));
 
 	$effect(() => {
 		if (!browser || !observer) return;
@@ -106,6 +129,32 @@
 			lastObservedSentinel = null;
 		}
 	});
+
+	$effect(() => {
+		if (!browser) return;
+
+		document.body.classList.toggle('mobile-sidebar-open', isSidebarOpen);
+
+		return () => {
+			document.body.classList.remove('mobile-sidebar-open');
+		};
+	});
+
+	$effect(() => {
+		if (!browser || !isSidebarOpen) return;
+
+		const handleKeydown = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') {
+				isSidebarOpen = false;
+			}
+		};
+
+		window.addEventListener('keydown', handleKeydown);
+
+		return () => {
+			window.removeEventListener('keydown', handleKeydown);
+		};
+	});
 </script>
 
 <div class="full-page">
@@ -116,6 +165,19 @@
 		/>
 	</div>
 	<aside class="left"></aside>
+	<button
+		class="mobile-sidebar-toggle"
+		type="button"
+		aria-expanded={isSidebarOpen}
+		aria-controls="homepage-sidebar"
+		aria-label={isSidebarOpen ? 'Close about and issues panel' : 'Open about and issues panel'}
+		onclick={() => {
+			isSidebarOpen = !isSidebarOpen;
+		}}
+	>
+		<span aria-hidden="true">☰</span>
+		<span>About &amp; Issues</span>
+	</button>
 	<main>
 		{#each frontPage.currentYear.highlighted as post}
 			<Snippet {post} />
@@ -140,7 +202,7 @@
 		{#if loadError}
 			<div class="load-error" role="alert">
 				<p>{loadError}</p>
-				<button class="load-more-button" on:click={() => void loadMore()} disabled={isLoading}>
+				<button class="load-more-button" onclick={() => void loadMore()} disabled={isLoading}>
 					Try again
 				</button>
 			</div>
@@ -148,7 +210,7 @@
 		{#if pagination.hasMore && !loadError}
 			<div class="load-more">
 				<div class="infinite-scroll-sentinel" bind:this={sentinel} aria-hidden="true"></div>
-				<button class="load-more-button" on:click={() => void loadMore()} disabled={isLoading}>
+				<button class="load-more-button" onclick={() => void loadMore()} disabled={isLoading}>
 					{isLoading ? 'Loading…' : 'Load more'}
 				</button>
 			</div>
@@ -156,14 +218,47 @@
 			<p class="loading">Loading…</p>
 		{/if}
 	</main>
-	<aside class="right">
-		<Mission />
-		<PastIssues />
-		<Links></Links>
+	<button
+		class="sidebar-backdrop"
+		type="button"
+		aria-label="Close about and issues panel"
+		class:is-visible={isSidebarOpen}
+		onclick={() => {
+			isSidebarOpen = false;
+		}}
+	></button>
+	<aside
+		id="homepage-sidebar"
+		class="right"
+		class:is-open={isSidebarOpen}
+		aria-label="About The Innovator"
+	>
+		<div class="sidebar-header">
+			<p>About The Innovator</p>
+			<button
+				class="sidebar-close"
+				type="button"
+				aria-label="Close about and issues panel"
+				onclick={() => {
+					isSidebarOpen = false;
+				}}
+			>
+				×
+			</button>
+		</div>
+		<div class="sidebar-sections">
+			<Mission />
+			<PastIssues />
+			<Links></Links>
+		</div>
 	</aside>
 </div>
 
 <style>
+	:global(body.mobile-sidebar-open) {
+		overflow: hidden;
+	}
+
 	h2 {
 		color: var(--color-accent);
 	}
@@ -186,6 +281,12 @@
 		grid-area: left;
 	}
 
+	.mobile-sidebar-toggle,
+	.sidebar-backdrop,
+	.sidebar-header {
+		display: none;
+	}
+
 	main {
 		grid-area: main;
 		display: grid;
@@ -194,6 +295,11 @@
 
 	.right {
 		grid-area: right;
+	}
+
+	.sidebar-sections {
+		display: grid;
+		gap: 1.25rem;
 	}
 
 	.banner {
@@ -294,14 +400,121 @@
 		}
 	}
 
-	@media (max-width: 900px) {
+	@media (max-width: 1023px) {
 		.full-page {
 			grid-template-areas:
 				'banner'
-				'main'
-				'left'
-				'right';
-			grid-template-columns: 1fr;
+				'main';
+			grid-template-columns: minmax(0, 1fr);
+			padding: var(--page-padding, 1rem);
+		}
+
+		.left {
+			display: none;
+		}
+
+		.mobile-sidebar-toggle {
+			position: fixed;
+			right: 1rem;
+			bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+			z-index: 50;
+			display: inline-flex;
+			align-items: center;
+			gap: 0.5rem;
+			border: none;
+			border-radius: 999px;
+			padding: 0.8rem 1rem;
+			background: var(--color-accent, #6e112a);
+			color: #fff;
+			font-family: var(--font-sans, 'Work Sans', sans-serif);
+			font-size: 0.95rem;
+			font-weight: 600;
+			box-shadow: 0 16px 40px rgba(15, 22, 38, 0.24);
+		}
+
+		.sidebar-backdrop {
+			position: fixed;
+			inset: 0;
+			z-index: 59;
+			border: 0;
+			padding: 0;
+			background: rgba(15, 22, 38, 0.5);
+			opacity: 0;
+			visibility: hidden;
+			transition:
+				opacity 0.2s ease,
+				visibility 0.2s ease;
+		}
+
+		.sidebar-backdrop.is-visible {
+			display: block;
+			opacity: 1;
+			visibility: visible;
+		}
+
+		.right {
+			position: fixed;
+			top: 0;
+			right: 0;
+			z-index: 60;
+			display: grid;
+			grid-template-rows: auto 1fr;
+			gap: 1rem;
+			width: min(24rem, calc(100vw - 1.5rem));
+			height: 100dvh;
+			padding: 1rem;
+			background: linear-gradient(180deg, #f6efe6 0%, #f3f4f6 100%);
+			box-shadow: -18px 0 45px rgba(15, 22, 38, 0.18);
+			overflow-y: auto;
+			transform: translateX(calc(100% + 1rem));
+			opacity: 0;
+			visibility: hidden;
+			pointer-events: none;
+			transition:
+				transform 0.25s ease,
+				opacity 0.2s ease,
+				visibility 0.2s ease;
+		}
+
+		.sidebar-sections > :global(*) {
+			padding: 1rem 1.1rem;
+			background: var(--color-surface, #ffffff);
+			border: 1px solid var(--color-border, #d9dce4);
+			box-shadow: 0 10px 30px rgba(15, 22, 38, 0.06);
+		}
+
+		.right.is-open {
+			transform: translateX(0);
+			opacity: 1;
+			visibility: visible;
+			pointer-events: auto;
+		}
+
+		.sidebar-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 1rem;
+			padding-bottom: 0.75rem;
+			border-bottom: 1px solid rgba(15, 22, 38, 0.12);
+		}
+
+		.sidebar-header p {
+			margin: 0;
+			font-family: var(--font-sans, 'Work Sans', sans-serif);
+			font-size: 0.75rem;
+			font-weight: 600;
+			letter-spacing: 0.12em;
+			text-transform: uppercase;
+			color: var(--color-accent-2, #363a42);
+		}
+
+		.sidebar-close {
+			border: none;
+			background: transparent;
+			color: var(--color-accent-2, #363a42);
+			font-size: 2rem;
+			line-height: 1;
 		}
 	}
 </style>
