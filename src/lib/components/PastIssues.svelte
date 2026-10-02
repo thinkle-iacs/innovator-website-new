@@ -7,6 +7,10 @@
 			label: 'All'
 		},
 		{
+			href: 'https://drive.google.com/drive/folders/1o-oQV-oR1YoqFtQxqSlEpCblnxBpVJyW',
+			label: 'V20: 2026-2027'
+		},
+		{
 			href: 'https://drive.google.com/drive/folders/1b4a1Xx_aorMT36VL0pUsxCK8LGB4GPfJ',
 			label: 'V19: 2025-2026'
 		},
