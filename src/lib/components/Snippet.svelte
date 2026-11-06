@@ -4,6 +4,7 @@
 	import Dateline from './Dateline.svelte';
 	import Byline from './Byline.svelte';
 	import Tags from './Tags.svelte';
+	import { hasFancyIntro } from '$lib/fancyIntro';
 
 	let { post }: { post: InnovatorPost } = $props();
 	let element = $state<HTMLArticleElement | null>(null);
@@ -46,7 +47,7 @@
 		<Tags {post} />
 	</div>
 	{#if isTiny(post)}
-		<div class="page content">
+		<div class="page content" class:fancy-intro={hasFancyIntro(post.content)}>
 			{#if shouldShowFeaturedImage(post)}
 				<div class="featured-image-container">
 					<a href={post.relativeLink}>

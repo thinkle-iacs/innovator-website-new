@@ -3,6 +3,7 @@
 	import Dateline from './Dateline.svelte';
 	import Byline from './Byline.svelte';
 	import Tags from './Tags.svelte';
+	import { hasFancyIntro } from '$lib/fancyIntro';
 
 	let { post }: { post: InnovatorPost } = $props();
 	const stripHtml = (html: string) =>
@@ -52,7 +53,7 @@
 			{/if}
 		</figure>
 	{/if}
-	<div class="content">
+	<div class="content" class:fancy-intro={hasFancyIntro(post.content)}>
 		{@html post.content}
 	</div>
 </article>
@@ -133,7 +134,7 @@
 		text-align: center;
 	}
 
-	.content :global(p:first-of-type::first-letter) {
+	.content.fancy-intro :global(p:first-of-type::first-letter) {
 		font-size: clamp(2.5rem, 6vw, 4rem);
 		font-weight: 600;
 		line-height: 1;

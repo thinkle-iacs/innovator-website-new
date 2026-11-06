@@ -9,7 +9,7 @@
 	clear: both;
 }
 
-.content p:first-of-type::first-line {
+.content.fancy-intro p:first-of-type::first-line {
 	font-variant: small-caps;
 	letter-spacing: 0.03em;
 }
